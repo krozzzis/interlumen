@@ -38,6 +38,18 @@ impl Mul<f32> for Color {
     }
 }
 
+impl Add<Color> for Color {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self(
+            self.0 + rhs.0,
+            self.1 + rhs.1,
+            self.2 + rhs.2,
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3(pub f32, pub f32, pub f32);
 
@@ -83,7 +95,7 @@ impl Add<Vec3> for Vec3 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
-        Self(self.0 + rhs.1, self.1 + rhs.1, self.2 + rhs.2)
+        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -99,7 +111,7 @@ impl Sub<Vec3> for Vec3 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
-        Self(self.0 - rhs.1, self.1 - rhs.1, self.2 - rhs.2)
+        Self(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
     }
 }
 
@@ -113,6 +125,10 @@ pub trait Colorable {
 
 pub trait Position {
     fn pos(&self) -> Vec3;
+}
+
+pub trait Normal {
+    fn norm(&self, point: Vec3) -> Vec3;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -139,6 +155,12 @@ impl Colorable for Sphere {
 impl Position for Sphere {
     fn pos(&self) -> Vec3 {
         return Vec3(self.x, self.y, self.z);
+    }
+}
+
+impl Normal for Sphere {
+    fn norm(&self, point: Vec3) -> Vec3 {
+        return (point - self.pos()).norm()
     }
 }
 
@@ -170,9 +192,15 @@ impl Position for Plane {
     }
 }
 
+impl Normal for Plane {
+    fn norm(&self, point: Vec3) -> Vec3 {
+        return Vec3(0.0, 1.0, 0.0)
+    }
+}
+
 impl Object for Plane {}
 
-trait Object: Distance + Colorable + Position {}
+trait Object: Distance + Colorable + Position + Normal {}
 
 struct Renderer {
     width: usize,
@@ -219,25 +247,14 @@ impl Renderer {
         }
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize) -> Option<Color> {
-        let cx = self.width / 2;
-        let cy = self.height / 2;
-
-        let mut i = 0;
-        let rd: Vec3 = self.get_vec_by_pixel(x, y).norm();
+    fn cast_ray(&self, origin: Vec3, ray: Vec3) -> Option<(&Box<dyn Object>, f32)> {
         let mut t = 1.0;
-        let speed = 0.001;
-        let light = Vec3(
-            5.0 * ((self.time % 10000000) as f32 * speed).sin(),
-            5.0 * ((self.time % 10000000) as f32 * speed).cos(),
-            3.0,
-        );
-        // println!("{light:?}");
         let mut hit = &self.scene[0];
+        let mut i = 0;
         while i <= 90 {
             let mut dist: f32 = 1000.0;
             for obj in &self.scene {
-                let d = obj.dist(rd * t);
+                let d = obj.dist(origin + ray * t);
                 if d <= dist {
                     dist = d;
                     hit = obj;
@@ -246,13 +263,50 @@ impl Renderer {
             i += 1;
             t += dist;
             if dist <= 0.01 {
-                let n = (rd * t - hit.pos()).norm();
-                let lux = ((n * (light - rd * t).norm()).max(0.0) + 0.1).min(1.0);
-                return Some(hit.color() * lux);
+                return Some((hit, t));
             } else if dist > 2000.0 {
                 break;
             }
         }
+        None
+    }
+
+    pub fn get_pixel(&self, x: usize, y: usize) -> Option<Color> {
+        let cx = self.width / 2;
+        let cy = self.height / 2;
+
+        let speed = 0.0003;
+        let light = Vec3(
+            5.0 * ((self.time % 10000000) as f32 * speed).sin(),
+            5.0 * ((self.time % 10000000) as f32 * speed).cos(),
+            3.0,
+        );
+
+        let rd: Vec3 = self.get_vec_by_pixel(x, y).norm();
+        let hit = self.cast_ray(Vec3(0.0, 0.0, 0.0), rd);
+        if let Some((x, t)) = hit {
+            let n = (rd * t - x.pos()).norm();
+            let light_vec: Vec3 = (light - rd*t).norm();
+            let mut lux: f32 = ((n * light_vec).max(0.0) + 0.1).min(1.0);
+
+            let norm = x.norm(rd * t);
+            let v = rd * t;
+            let refl = (v - norm * ((v * norm) * 2.0)).norm();
+            let light_hit = self.cast_ray(v, light_vec);
+
+            if let Some(_) = light_hit {
+                lux = 0.1;
+            }
+
+            let ht = self.cast_ray(v, refl);
+
+            if let Some((y, _)) = ht {
+                return Some(((y.color() * 0.8 + x.color()*0.2)) * lux);
+            }
+
+            return Some(x.color() * lux);
+        }
+        
         Some(Color(0, 0, 0))
     }
 
@@ -280,6 +334,7 @@ impl Renderer {
 fn main() {
     // execute!(stdout(), EnterAlternateScreen);
     let mut r = Renderer::new();
+    /*
     r.add_obj(Box::new(Sphere {
         x: 0.0,
         y: 2.0,
@@ -287,16 +342,18 @@ fn main() {
         radius: 1.0,
         color: Color(255, 0, 0),
     }));
+    */
     r.add_obj(Box::new(Sphere {
-        x: 0.0,
-        y: 1.5,
+        x: 3.0,
+        y: 3.5,
         z: 7.0,
         radius: 2.0,
         color: Color(255, 0, 128),
     }));
+    
     r.add_obj(Box::new(Sphere {
         x: 0.0,
-        y: 0.0,
+        y: 0.4,
         z: 8.0,
         radius: 2.0,
         color: Color(0, 255, 0),
@@ -305,7 +362,7 @@ fn main() {
         x: 0.0,
         y: -2.0,
         z: 0.0,
-        color: Color(255, 255, 0),
+        color: Color(200, 200, 200),
     }));
     loop {
         r.update_size();
