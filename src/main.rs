@@ -1,4 +1,5 @@
 use std::{
+    sync::Arc,
     io::{stdout, Write},
     ops::{Add, Div, Mul, Sub},
     time::{SystemTime, UNIX_EPOCH},
@@ -10,6 +11,8 @@ use crossterm::{
     style::{self, Print},
     terminal::{self, EnterAlternateScreen, SetTitle},
 };
+
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color(pub u8, pub u8, pub u8);
@@ -232,8 +235,8 @@ impl Renderer {
                 DisableBlinking,
                 Hide
             );
-            for x in 0..self.width {
-                let color = self.get_pixel(x, y).unwrap();
+            let line: Vec<Color> = (0..self.width).into_iter().map(move |x| self.get_pixel(x, y).unwrap()).collect();
+            for color in line {
                 execute!(
                     stdout(),
                     style::SetForegroundColor(style::Color::Rgb {
@@ -275,11 +278,11 @@ impl Renderer {
         let cx = self.width / 2;
         let cy = self.height / 2;
 
-        let speed = 0.0003;
+        let speed = 0.0008;
         let light = Vec3(
             5.0 * ((self.time % 10000000) as f32 * speed).sin(),
-            5.0 * ((self.time % 10000000) as f32 * speed).cos(),
-            3.0,
+            3.0 + 2.0 * ((self.time % 10000000) as f32 * speed).cos(),
+            3.0 * ((self.time % 10000000) as f32 * speed).sin(),
         );
 
         let rd: Vec3 = self.get_vec_by_pixel(x, y).norm();
@@ -313,7 +316,9 @@ impl Renderer {
     fn get_vec_by_pixel(&self, x: usize, y: usize) -> Vec3 {
         let cx = self.width as f32 / 2.0;
         let cy = self.height as f32 / 2.0;
-        Vec3((x as f32 - cx) / cx, -(y as f32 - cy) / cy, 1.0)
+        let ratio = self.width as f32 / self.height as f32;
+        let char_ratio = 2.0;
+        Vec3((x as f32 - cx) / cx, -(y as f32 - cy) / cy / ratio * char_ratio, 1.0)
     }
 
     pub fn update_size(&mut self) {
