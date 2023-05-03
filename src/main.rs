@@ -1,209 +1,27 @@
+mod color;
+mod objects;
+mod vec;
+
+use color::*;
+use objects::*;
+use vec::*;
+
 use std::{
-    sync::Arc,
-    io::{stdout, Write},
-    ops::{Add, Div, Mul, Sub},
-    time::{SystemTime, UNIX_EPOCH},
+    io::stdout,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use crossterm::{
     cursor::{DisableBlinking, Hide, MoveTo, SavePosition},
+    event::{poll, read, Event, KeyCode},
     execute,
     style::{self, Print},
-    terminal::{self, EnterAlternateScreen, SetTitle},
+    terminal::{
+        self, disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    },
 };
 
 use rayon::prelude::*;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Color(pub u8, pub u8, pub u8);
-
-impl Div<f32> for Color {
-    type Output = Self;
-
-    fn div(self, rhs: f32) -> Self {
-        Self(
-            (self.0 as f32 / rhs) as u8,
-            (self.1 as f32 / rhs) as u8,
-            (self.2 as f32 / rhs) as u8,
-        )
-    }
-}
-
-impl Mul<f32> for Color {
-    type Output = Self;
-
-    fn mul(self, rhs: f32) -> Self {
-        Self(
-            (self.0 as f32 * rhs) as u8,
-            (self.1 as f32 * rhs) as u8,
-            (self.2 as f32 * rhs) as u8,
-        )
-    }
-}
-
-impl Add<Color> for Color {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self {
-        Self(
-            self.0 + rhs.0,
-            self.1 + rhs.1,
-            self.2 + rhs.2,
-        )
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Vec3(pub f32, pub f32, pub f32);
-
-impl Vec3 {
-    pub fn len(&self) -> f32 {
-        (*self * *self).sqrt()
-    }
-
-    pub fn norm(&self) -> Vec3 {
-        *self / self.len()
-    }
-
-    pub fn normalize(&mut self) {
-        *self = *self / self.len()
-    }
-}
-
-impl Mul<f32> for Vec3 {
-    type Output = Self;
-
-    fn mul(self, rhs: f32) -> Self {
-        Self(self.0 * rhs, self.1 * rhs, self.2 * rhs)
-    }
-}
-
-impl Mul<Vec3> for Vec3 {
-    type Output = f32;
-
-    fn mul(self, rhs: Self) -> f32 {
-        self.0 * rhs.0 + self.1 * rhs.1 + self.2 * rhs.2
-    }
-}
-
-impl Div<f32> for Vec3 {
-    type Output = Self;
-
-    fn div(self, rhs: f32) -> Self {
-        Self(self.0 / rhs, self.1 / rhs, self.2 / rhs)
-    }
-}
-
-impl Add<Vec3> for Vec3 {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self {
-        Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-    }
-}
-
-impl Add<f32> for Vec3 {
-    type Output = Self;
-
-    fn add(self, rhs: f32) -> Self {
-        Self(self.0 + rhs, self.1 + rhs, self.2 + rhs)
-    }
-}
-
-impl Sub<Vec3> for Vec3 {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self {
-        Self(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
-    }
-}
-
-pub trait Distance {
-    fn dist(&self, from: Vec3) -> f32;
-}
-
-pub trait Colorable {
-    fn color(&self) -> Color;
-}
-
-pub trait Position {
-    fn pos(&self) -> Vec3;
-}
-
-pub trait Normal {
-    fn norm(&self, point: Vec3) -> Vec3;
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Sphere {
-    x: f32,
-    y: f32,
-    z: f32,
-    radius: f32,
-    color: Color,
-}
-
-impl Distance for Sphere {
-    fn dist(&self, from: Vec3) -> f32 {
-        ((from - self.pos()).len() - self.radius).abs()
-    }
-}
-
-impl Colorable for Sphere {
-    fn color(&self) -> Color {
-        return self.color;
-    }
-}
-
-impl Position for Sphere {
-    fn pos(&self) -> Vec3 {
-        return Vec3(self.x, self.y, self.z);
-    }
-}
-
-impl Normal for Sphere {
-    fn norm(&self, point: Vec3) -> Vec3 {
-        return (point - self.pos()).norm()
-    }
-}
-
-impl Object for Sphere {}
-
-#[derive(Debug, Clone, Copy)]
-struct Plane {
-    x: f32,
-    y: f32,
-    z: f32,
-    color: Color,
-}
-
-impl Distance for Plane {
-    fn dist(&self, from: Vec3) -> f32 {
-        Vec3(0.0, 1.0, 0.0) * (from - self.pos())
-    }
-}
-
-impl Colorable for Plane {
-    fn color(&self) -> Color {
-        return self.color;
-    }
-}
-
-impl Position for Plane {
-    fn pos(&self) -> Vec3 {
-        return Vec3(self.x, self.y, self.z);
-    }
-}
-
-impl Normal for Plane {
-    fn norm(&self, point: Vec3) -> Vec3 {
-        return Vec3(0.0, 1.0, 0.0)
-    }
-}
-
-impl Object for Plane {}
-
-trait Object: Distance + Colorable + Position + Normal {}
 
 struct Renderer {
     width: usize,
@@ -235,7 +53,10 @@ impl Renderer {
                 DisableBlinking,
                 Hide
             );
-            let line: Vec<Color> = (0..self.width).into_iter().map(move |x| self.get_pixel(x, y).unwrap()).collect();
+            let line: Vec<Color> = (0..self.width)
+                .into_iter()
+                .map(move |x| self.get_pixel(x, y).unwrap())
+                .collect();
             for color in line {
                 execute!(
                     stdout(),
@@ -289,7 +110,7 @@ impl Renderer {
         let hit = self.cast_ray(Vec3(0.0, 0.0, 0.0), rd);
         if let Some((x, t)) = hit {
             let n = (rd * t - x.pos()).norm();
-            let light_vec: Vec3 = (light - rd*t).norm();
+            let light_vec: Vec3 = (light - rd * t).norm();
             let mut lux: f32 = ((n * light_vec).max(0.0) + 0.1).min(1.0);
 
             let norm = x.norm(rd * t);
@@ -304,12 +125,12 @@ impl Renderer {
             let ht = self.cast_ray(v, refl);
 
             if let Some((y, _)) = ht {
-                return Some(((y.color() * 0.8 + x.color()*0.2)) * lux);
+                return Some((y.color() * 0.8 + x.color() * 0.2) * lux);
             }
 
             return Some(x.color() * lux);
         }
-        
+
         Some(Color(0, 0, 0))
     }
 
@@ -318,7 +139,11 @@ impl Renderer {
         let cy = self.height as f32 / 2.0;
         let ratio = self.width as f32 / self.height as f32;
         let char_ratio = 2.0;
-        Vec3((x as f32 - cx) / cx, -(y as f32 - cy) / cy / ratio * char_ratio, 1.0)
+        Vec3(
+            (x as f32 - cx) / cx,
+            -(y as f32 - cy) / cy / ratio * char_ratio,
+            1.0,
+        )
     }
 
     pub fn update_size(&mut self) {
@@ -336,42 +161,43 @@ impl Renderer {
             .as_millis();
     }
 }
-fn main() {
-    // execute!(stdout(), EnterAlternateScreen);
+fn main() -> anyhow::Result<()> {
+    execute!(stdout(), EnterAlternateScreen)?;
+    enable_raw_mode()?;
     let mut r = Renderer::new();
-    /*
-    r.add_obj(Box::new(Sphere {
-        x: 0.0,
-        y: 2.0,
-        z: 5.0,
-        radius: 1.0,
-        color: Color(255, 0, 0),
-    }));
-    */
-    r.add_obj(Box::new(Sphere {
-        x: 3.0,
-        y: 3.5,
-        z: 7.0,
-        radius: 2.0,
-        color: Color(255, 0, 128),
-    }));
-    
-    r.add_obj(Box::new(Sphere {
-        x: 0.0,
-        y: 0.4,
-        z: 8.0,
-        radius: 2.0,
-        color: Color(0, 255, 0),
-    }));
-    r.add_obj(Box::new(Plane {
-        x: 0.0,
-        y: -2.0,
-        z: 0.0,
-        color: Color(200, 200, 200),
-    }));
-    loop {
-        r.update_size();
-        r.update_time();
-        r.draw();
+    r.add_obj(Box::new(Sphere::new(
+        Vec3(3.0, 3.5, 7.0),
+        2.0,
+        Color(255, 0, 128),
+    )));
+    r.add_obj(Box::new(Sphere::new(
+        Vec3(0.0, 0.4, 8.0),
+        2.0,
+        Color(0, 255, 0),
+    )));
+    r.add_obj(Box::new(Plane::new(
+        Vec3(0.0, -2.0, 0.0),
+        Color(200, 200, 200),
+    )));
+    let mut running = true;
+    while running {
+        if poll(Duration::from_millis(1))? {
+            match read()? {
+                Event::Key(event)
+                    if event.code == KeyCode::Esc || event.code == KeyCode::Char('q') =>
+                {
+                    running = false;
+                    break;
+                }
+                _ => {}
+            }
+        } else {
+            r.update_size();
+            r.update_time();
+            r.draw();
+        }
     }
+    execute!(stdout(), LeaveAlternateScreen)?;
+    disable_raw_mode()?;
+    Ok(())
 }
