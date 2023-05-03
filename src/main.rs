@@ -295,7 +295,7 @@ impl Renderer {
             let light_hit = self.cast_ray(v, light_vec);
 
             if let Some(_) = light_hit {
-                lux = 0.1;
+                lux *= 0.1;
             }
 
             let ht = self.cast_ray(v, refl);
