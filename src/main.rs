@@ -13,7 +13,7 @@ use std::{
 
 use crossterm::{
     cursor::{DisableBlinking, Hide, MoveTo, SavePosition},
-    event::{poll, read, Event, KeyCode},
+    event::{poll, read, Event, KeyCode, KeyModifiers},
     execute,
     style::{self, Print},
     terminal::{
@@ -27,7 +27,8 @@ struct Renderer {
     width: usize,
     height: usize,
     scene: Vec<Box<dyn Object>>,
-    time: u128,
+    time: usize,
+    last_frame: SystemTime,
 }
 
 impl Renderer {
@@ -37,6 +38,7 @@ impl Renderer {
             height: 0,
             scene: Vec::new(),
             time: 0,
+            last_frame: SystemTime::now(),
         }
     }
 
@@ -154,11 +156,11 @@ impl Renderer {
     }
 
     pub fn update_time(&mut self) {
-        let start = SystemTime::now();
-        self.time = start
-            .duration_since(UNIX_EPOCH)
+        self.time += SystemTime::now()
+            .duration_since(self.last_frame)
             .expect("Time went backwards")
-            .as_millis();
+            .as_millis() as usize;
+        self.last_frame = SystemTime::now();
     }
 }
 fn main() -> anyhow::Result<()> {
@@ -179,21 +181,29 @@ fn main() -> anyhow::Result<()> {
         Vec3(0.0, -2.0, 0.0),
         Color(200, 200, 200),
     )));
-    let mut running = true;
-    while running {
+    let mut update_time = true;
+    loop {
         if poll(Duration::from_millis(1))? {
             match read()? {
                 Event::Key(event)
-                    if event.code == KeyCode::Esc || event.code == KeyCode::Char('q') =>
+                    if event.code == KeyCode::Esc
+                        || event.code == KeyCode::Char('q')
+                        || event.code == KeyCode::Char('c')
+                            && event.modifiers.contains(KeyModifiers::CONTROL) =>
                 {
-                    running = false;
-                    break;
+                    break
+                }
+                Event::Key(event) if event.code == KeyCode::Char('p') => {
+                    update_time = !update_time;
+                    r.last_frame = SystemTime::now();
                 }
                 _ => {}
             }
         } else {
             r.update_size();
-            r.update_time();
+            if update_time {
+                r.update_time();
+            }
             r.draw();
         }
     }
