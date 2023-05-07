@@ -1,21 +1,21 @@
+use crate::Texturable;
+
 use super::{Hittable, Normal, Object, Position};
 use interlumen_core::Vec3;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Sphere {
-    x: f32,
-    y: f32,
-    z: f32,
+    pos: Vec3,
     radius: f32,
+    material: usize,
 }
 
 impl Sphere {
-    pub fn new(position: Vec3, radius: f32) -> Self {
+    pub fn new(pos: Vec3, radius: f32, material: usize) -> Self {
         Self {
-            x: position.0,
-            y: position.1,
-            z: position.2,
+            pos,
             radius,
+            material,
         }
     }
 }
@@ -28,13 +28,30 @@ impl Hittable for Sphere {
 
 impl Position for Sphere {
     fn pos(&self) -> Vec3 {
-        return Vec3(self.x, self.y, self.z);
+        self.pos
+    }
+
+    fn set_pos(&mut self, pos: Vec3) {
+        self.pos = pos;
     }
 }
 
 impl Normal for Sphere {
     fn norm(&self, point: Vec3) -> Vec3 {
-        return (point - self.pos()).norm();
+        (point - self.pos()).norm()
+    }
+}
+
+impl Texturable for Sphere {
+    fn uv(&self, point: Vec3) -> Vec3 {
+        let d = self.pos - point;
+        let u = 0.5 + d.2.atan2(d.0);
+        let v = 0.5 + d.1.asin();
+        Vec3(u, v, 0.0)
+    }
+
+    fn material(&self) -> usize {
+        self.material
     }
 }
 

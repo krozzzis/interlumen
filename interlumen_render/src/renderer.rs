@@ -1,4 +1,4 @@
-use crate::{Camera, Object};
+use crate::{Camera, DiffuseMaterial, Material, Object, Scene};
 use interlumen_core::{Color, Ray, Vec3};
 
 pub struct RendererSettings {
@@ -11,10 +11,10 @@ pub struct RendererSettings {
 impl RendererSettings {
     pub fn new() -> Self {
         Self {
-            max_iter: 50,
-            max_dist: 2000.0,
+            max_iter: 80,
+            max_dist: 200.0,
             hit_thres: 0.01,
-            pixel_ratio: 2.0,
+            pixel_ratio: 1.0,
         }
     }
 }
@@ -24,7 +24,8 @@ pub struct Renderer {}
 impl Renderer {
     pub fn render_pixel(
         settings: &RendererSettings,
-        scene: &Vec<Box<dyn Object>>,
+        scene: &Scene,
+        materials: &Vec<Box<dyn Material>>,
         x: usize,
         y: usize,
         screen_w: usize,
@@ -36,8 +37,27 @@ impl Renderer {
         if let Some((obj, hit)) = Renderer::closest_hit(settings, &pixel_ray, scene) {
             let light_ray = (Vec3(3.0, 5.0, 1.0) - hit).norm();
             let norm = obj.norm(hit);
-            let light = light_ray * norm;
-            Color::RED * light
+            let mut light: f32 = light_ray * norm * 0.8 + 0.2;
+
+            if let Some(_) = Renderer::closest_hit(
+                settings,
+                &Ray {
+                    origin: hit,
+                    dir: light_ray,
+                },
+                &scene,
+            ) {
+                light *= 0.1;
+            }
+
+            if let Some(a) = materials.get(obj.material()) {
+                a.get_color(obj.uv(hit)) * light
+            } else {
+                DiffuseMaterial {
+                    albedo: Color::new(1.0, 0.0, 1.0, 1.0),
+                }
+                .get_color(obj.uv(hit))
+            }
         } else {
             Color::BLACK
         }
