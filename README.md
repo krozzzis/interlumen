@@ -1,21 +1,40 @@
 # Simple and dumb ray tracer
 
-<img src="images/preview.png" width="400px" />
+<img src="images/preview.git"/>
 
-## Run
+## Build
+
 ```bash
-$ cargo run
+$ cargo build --release
 ```
 
 ## Usage
 
+### Console mode:
+
+Run:
+```bash
+$ ./target/release/interlumen
+```
+
 - `p` - pause/resume animations
 - `q` / `ESC` - quit
 
+### GUI mode:
+
+Run:
+```bash
+$ ./target/release/interlumen gui
+```
+
+- `q` - quit
+
+
 ## TODO
 - [x] Runs in terminal
-- [ ] Runs in GUI
+- [x] Runs in GUI
 - [ ] Saves image to file
-- [ ] Multithreading
+- [x] Multithreading
 - [ ] Monte-Carlo sampling
+- [ ] PBR rendering
 - [ ] Loads scene from file
