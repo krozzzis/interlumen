@@ -1,2 +1,4 @@
 /target
+/interlumen_core/target
+/interlumen_render/target
 *.exe

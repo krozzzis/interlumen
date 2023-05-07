@@ -1,6 +1,5 @@
-use crate::color::Color;
-use crate::objects::{Colorable, Distance, Normal, Object, Position};
-use crate::vec::Vec3;
+use super::{Hittable, Normal, Object, Position};
+use interlumen_core::Vec3;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Sphere {
@@ -8,30 +7,22 @@ pub struct Sphere {
     y: f32,
     z: f32,
     radius: f32,
-    color: Color,
 }
 
 impl Sphere {
-    pub fn new(position: Vec3, radius: f32, color: Color) -> Self {
+    pub fn new(position: Vec3, radius: f32) -> Self {
         Self {
             x: position.0,
             y: position.1,
             z: position.2,
             radius,
-            color,
         }
     }
 }
 
-impl Distance for Sphere {
+impl Hittable for Sphere {
     fn dist(&self, from: Vec3) -> f32 {
         ((from - self.pos()).len() - self.radius).abs()
-    }
-}
-
-impl Colorable for Sphere {
-    fn color(&self) -> Color {
-        return self.color;
     }
 }
 

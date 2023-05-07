@@ -1,9 +1,13 @@
 [package]
-name = "rust_rt"
+name = "interlumen"
 version = "0.1.0"
 edition = "2021"
+authors = ["krozzzis"]
 
 [dependencies]
 anyhow = "1.0.71"
 crossterm = "0.26.1"
 rayon = "1.7"
+
+interlumen_core = {path = "./interlumen_core"}
+interlumen_render = {path = "./interlumen_render"}

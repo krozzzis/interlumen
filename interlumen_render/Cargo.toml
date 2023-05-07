@@ -1,0 +1,7 @@
+[package]
+name = "interlumen_render"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+interlumen_core = {path = "../interlumen_core"}
