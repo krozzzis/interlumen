@@ -1,6 +1,6 @@
 # Simple and dumb ray tracer
 
-<img src="images/preview.git"/>
+<img src="images/preview.gif" />
 
 ## Build
 
