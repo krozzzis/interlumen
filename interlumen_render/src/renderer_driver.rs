@@ -21,7 +21,7 @@ impl RendererDriver {
     pub fn draw_image(&self, width: usize, height: usize, scene: &Scene) -> Vec<Color> {
         (0..width*height).into_par_iter().map(move |pos| {
             let (x, y) = (pos % width, pos / width);
-            Renderer::render_pixel(&self.settings, &scene, &self.materials, x, y, width, height, &self.camera)
+            Renderer::render_pixel(&self.settings, &scene, &self.materials, x, y, width, height, &self.camera).pow(2.4)
         }).collect()
     }
 }

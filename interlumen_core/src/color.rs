@@ -164,6 +164,15 @@ impl Color {
             a: (color.a * 255.0) as u8,
         }
     }
+
+    pub fn pow(&self, pow: f32) -> Self {
+        Self {
+            r: self.r.powf(pow),
+            g: self.g.powf(pow),
+            b: self.b.powf(pow),
+            a: self.a,
+        }
+    }
 }
 
 impl Div<f32> for Color {
