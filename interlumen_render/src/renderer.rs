@@ -1,5 +1,11 @@
-use crate::{Camera, DiffuseMaterial, Material, Object, Scene};
+use crate::{Camera, BasicMaterial, Material, Object, Scene};
 use interlumen_core::{Color, Ray, Vec3};
+
+pub struct HitPayload<'a> {
+    pub distance: f32,
+    pub point: Vec3,
+    pub object: &'a Box<dyn Object>,
+}
 
 pub struct RendererSettings {
     pub max_iter: usize,
@@ -22,6 +28,8 @@ impl RendererSettings {
 pub struct Renderer {}
 
 impl Renderer {
+    pub const FALLBACK_MATERIAL: BasicMaterial = BasicMaterial { albedo: Color::new(1.0, 0.0, 1.0, 1.0), roughness: 0.0};
+
     pub fn render_pixel(
         settings: &RendererSettings,
         scene: &Scene,
@@ -34,7 +42,10 @@ impl Renderer {
     ) -> Color {
         let pixel_ray = camera.get_pixel_ray(x, y, screen_w, screen_h, settings.pixel_ratio);
 
-        if let Some((obj, hit)) = Renderer::closest_hit(settings, &pixel_ray, scene) {
+        if let Some(payload) = Renderer::closest_hit(settings, &pixel_ray, scene) {
+            let hit = payload.point;
+            let obj = payload.object;
+
             let light_ray = (Vec3(3.0, 5.0, 1.0) - hit).norm();
             let norm = obj.norm(hit);
             let mut light: f32 = light_ray * norm * 0.8 + 0.2;
@@ -51,12 +62,9 @@ impl Renderer {
             }
 
             if let Some(a) = materials.get(obj.material()) {
-                a.get_color(obj.uv(hit)) * light
+                a.get_color(obj.uv(hit)).albedo * light
             } else {
-                DiffuseMaterial {
-                    albedo: Color::new(1.0, 0.0, 1.0, 1.0),
-                }
-                .get_color(obj.uv(hit))
+                Renderer::FALLBACK_MATERIAL.get_color(obj.uv(hit)).albedo
             }
         } else {
             Color::BLACK
@@ -67,7 +75,7 @@ impl Renderer {
         settings: &RendererSettings,
         ray: &Ray,
         scene: &'a Vec<Box<dyn Object>>,
-    ) -> Option<(&'a Box<dyn Object>, Vec3)> {
+    ) -> Option<HitPayload<'a>> {
         let mut t = 1.0;
         let mut hit = &scene[0];
         let mut i = 0;
@@ -83,7 +91,7 @@ impl Renderer {
             i += 1;
             t += dist;
             if dist <= settings.hit_thres {
-                return Some((hit, ray.origin + ray.dir * t));
+                return Some(HitPayload{distance: t, point: ray.origin + ray.dir * t, object: hit});
             } else if dist > settings.max_dist {
                 break;
             }

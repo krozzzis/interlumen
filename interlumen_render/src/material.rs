@@ -1,17 +1,26 @@
 use interlumen_core::{Color, Vec3};
 
+pub struct PBRColor {
+    pub albedo: Color,
+    pub roughness: f32,
+}
+
 pub trait Material: Sync {
-    fn get_color(&self, uv: Vec3) -> Color;
+    fn get_color(&self, uv: Vec3) -> PBRColor;
 }
 
 #[derive(Debug, Clone)]
-pub struct DiffuseMaterial {
+pub struct BasicMaterial {
     pub albedo: Color,
+    pub roughness: f32,
 }
 
-impl Material for DiffuseMaterial {
-    fn get_color(&self, _uv: Vec3) -> Color {
-        self.albedo
+impl Material for BasicMaterial {
+    fn get_color(&self, _uv: Vec3) -> PBRColor {
+        PBRColor {
+            albedo: self.albedo,
+            roughness: self.roughness,
+        }
     }
 }
 
@@ -22,11 +31,14 @@ pub struct CheckerMaterial {
 }
 
 impl Material for CheckerMaterial {
-    fn get_color(&self, uv: Vec3) -> Color {
-        if (uv.0.ceil() + uv.1.ceil()) % 2.0 == 0.0 {
-            self.albedo1
-        } else {
-            self.albedo2
+    fn get_color(&self, uv: Vec3) -> PBRColor {
+        PBRColor {
+            albedo: if (uv.0.ceil() + uv.1.ceil()) % 2.0 == 0.0 {
+                    self.albedo1
+                } else {
+                    self.albedo2
+                },
+            roughness: 1.0,
         }
     }
 }

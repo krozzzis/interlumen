@@ -12,12 +12,14 @@ use std::sync::RwLock;
 fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new();
 
-    let white_mat = DiffuseMaterial {
+    let white_mat = BasicMaterial {
         albedo: Color::new_value(1.0, 1.0),
+        roughness: 1.0,
     };
 
-    let red_mat = DiffuseMaterial {
+    let red_mat = BasicMaterial {
         albedo: Color::new(1.0, 0.0, 0.0, 1.0),
+        roughness: 1.0,
     };
 
     let check_mat = CheckerMaterial {
