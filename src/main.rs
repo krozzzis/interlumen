@@ -13,7 +13,7 @@ fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new();
 
     let white_mat = BasicMaterial {
-        albedo: Color::new_value(1.0, 1.0),
+        albedo: Color::new_value(0.8, 1.0),
         roughness: 1.0,
     };
 
@@ -43,7 +43,7 @@ fn main() -> anyhow::Result<()> {
     let sphere = Sphere::new(Vec3(1.5, 0.0, 2.2), 0.3, 2);
     scene.push(Box::new(sphere));
 
-    let plane = Plane::new(Vec3(0.0, -2.0, 0.0), 1);
+    let plane = Plane::new(Vec3(0.0, -0.9, 0.0), 1);
     scene.push(Box::new(plane));
 
     engine.scene = scene;

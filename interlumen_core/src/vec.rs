@@ -10,20 +10,20 @@ impl Vec3 {
         (*self * *self).sqrt()
     }
 
-    pub fn norm(&self) -> Vec3 {
+    pub fn norm(&self) -> Self {
         *self / self.len()
     }
 
-    pub fn abs(&self) -> Vec3 {
+    pub fn abs(&self) -> Self {
         Self(self.0.abs(), self.1.abs(), self.2.abs())
     }
 
-    pub fn clamp_ceil(&self, min: f32) -> Vec3 {
+    pub fn clamp_ceil(&self, min: f32) -> Self {
         Self(self.0.max(min), self.1.max(min), self.2.max(min))
     }
 
-    pub fn cross(&self, other: Vec3) -> Vec3 {
-        Vec3(
+    pub fn cross(&self, other: Self) -> Self {
+        Self(
             self.1 * other.2 - self.2 * other.1,
             self.2 * other.0 - self.0 * other.2,
             self.0 * other.1 - self.1 * other.0,
@@ -32,6 +32,10 @@ impl Vec3 {
 
     pub fn normalize(&mut self) {
         *self = *self / self.len()
+    }
+
+    pub fn reflect(&self, normal: Self) -> Self {
+        *self - normal * (*self * normal * 2.0)
     }
 }
 
