@@ -21,26 +21,15 @@ use interlumen_render::{Camera, Renderer};
 
 use crate::engine::Engine;
 
-fn draw(width: u16, height: u16, camera: &Camera, engine: &Engine) -> anyhow::Result<()> {
+fn draw(width: u16, height: u16, engine: &Engine) -> anyhow::Result<()> {
+    let image = 
+    {
+        engine.renderer_driver.draw_image(width as usize, height as usize, &engine.scene)
+    };
     for y in 0..height as usize {
         execute!(stdout(), SavePosition, MoveTo(0, y as u16),)?;
-        let line: Vec<Color32> = (0..width as usize)
-            .into_par_iter()
-            .map(move |x| {
-                let color = Renderer::render_pixel(
-                    &engine.renderer_settings,
-                    &engine.scene,
-                    &engine.materials,
-                    x,
-                    y,
-                    width as usize,
-                    height as usize,
-                    camera,
-                );
-                color.as_color32()
-            })
-            .collect();
-        for color in line {
+        for color in &image[y*width as usize .. (y+1)*width as usize] {
+            let color = color.as_color32();
             execute!(
                 stdout(),
                 style::SetForegroundColor(style::Color::Rgb {
@@ -62,7 +51,7 @@ pub fn run(engine: RwLock<Engine>) -> anyhow::Result<()> {
     enable_raw_mode()?;
     {
         let mut eng = engine.write().unwrap();
-        eng.renderer_settings.pixel_ratio = 2.0;
+        eng.renderer_driver.settings.pixel_ratio = 2.0;
     }
     loop {
         if poll(Duration::from_millis(1))? {
@@ -95,7 +84,7 @@ pub fn run(engine: RwLock<Engine>) -> anyhow::Result<()> {
             {
                 let size = terminal::size()?;
                 let eng = engine.read().unwrap();
-                draw(size.0, size.1, &camera, &eng)?;
+                draw(size.0, size.1, &eng)?;
             }
         }
     }

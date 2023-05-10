@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
     materials.push(Box::new(check_mat));
     materials.push(Box::new(red_mat));
 
-    engine.materials = materials;
+    engine.renderer_driver.materials = materials;
 
     let mut scene: Scene = Vec::new();
 
@@ -47,7 +47,7 @@ fn main() -> anyhow::Result<()> {
     scene.push(Box::new(plane));
 
     engine.scene = scene;
-    engine.renderer_settings.max_iter = 110;
+    engine.renderer_driver.settings.max_iter = 110;
 
     let mut mode = 0;
 

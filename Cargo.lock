@@ -300,6 +300,7 @@ name = "interlumen_render"
 version = "0.1.0"
 dependencies = [
  "interlumen_core",
+ "rayon",
 ]
 
 [[package]]

@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 interlumen_core = {path = "../interlumen_core"}
+rayon = "1.7"

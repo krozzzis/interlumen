@@ -39,23 +39,12 @@ pub fn run(engine: RwLock<Engine>) -> anyhow::Result<()> {
         // Render
         {
             let eng = engine.read().unwrap();
-            buffer.par_iter_mut().enumerate().for_each(|(pos, i)| {
-                let color = Renderer::render_pixel(
-                    &eng.renderer_settings,
-                    &eng.scene,
-                    &eng.materials,
-                    pos % WIDTH,
-                    pos / WIDTH,
-                    WIDTH,
-                    HEIGHT,
-                    &camera,
-                );
+            buffer.par_iter_mut().zip(eng.renderer_driver.draw_image(WIDTH, HEIGHT, &eng.scene).into_par_iter()).for_each(move |(i, color)| {
                 let rgb = color.as_color32();
                 *i = (rgb.b as u32) | (rgb.g as u32) << 8 | (rgb.r as u32) << 16;
             });
-
-            window.update_with_buffer(&buffer, WIDTH, HEIGHT)?;
         }
+        window.update_with_buffer(&buffer, WIDTH, HEIGHT)?;
     }
     Ok(())
 }

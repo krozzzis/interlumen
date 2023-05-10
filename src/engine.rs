@@ -1,11 +1,10 @@
 use std::time::SystemTime;
 
-use interlumen_render::{Material, RendererSettings, Scene};
+use interlumen_render::{RendererDriver, Scene};
 
 pub struct Engine {
     pub scene: Scene,
-    pub materials: Vec<Box<dyn Material>>,
-    pub renderer_settings: RendererSettings,
+    pub renderer_driver: RendererDriver,
     pub time: f32,
     pub last_frame: SystemTime,
 }
@@ -13,9 +12,8 @@ pub struct Engine {
 impl Engine {
     pub fn new() -> Self {
         Self {
-            scene: Vec::new(),
-            materials: Vec::new(),
-            renderer_settings: RendererSettings::new(),
+            renderer_driver: RendererDriver::new(),
+            scene: Scene::new(),
             time: 0.0,
             last_frame: SystemTime::now(),
         }
