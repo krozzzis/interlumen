@@ -2,6 +2,7 @@ use interlumen_core::{Color, Vec3};
 
 pub struct PBRColor {
     pub albedo: Color,
+    pub emit: Color,
     pub roughness: f32,
 }
 
@@ -12,6 +13,7 @@ pub trait Material: Sync {
 #[derive(Debug, Clone)]
 pub struct BasicMaterial {
     pub albedo: Color,
+    pub emit: Color,
     pub roughness: f32,
 }
 
@@ -19,6 +21,7 @@ impl Material for BasicMaterial {
     fn get_color(&self, _uv: Vec3) -> PBRColor {
         PBRColor {
             albedo: self.albedo,
+            emit: self.emit,
             roughness: self.roughness,
         }
     }
@@ -38,7 +41,8 @@ impl Material for CheckerMaterial {
                 } else {
                     self.albedo2
                 },
-            roughness: 1.0,
+            emit: Color::BLACK,
+            roughness: 0.7,
         }
     }
 }

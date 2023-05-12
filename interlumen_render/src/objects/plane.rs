@@ -6,18 +6,19 @@ use interlumen_core::Vec3;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Plane {
     pos: Vec3,
+    norm: Vec3,
     material: usize,
 }
 
 impl Plane {
-    pub fn new(pos: Vec3, material: usize) -> Self {
-        Self { pos, material }
+    pub fn new(pos: Vec3, norm: Vec3, material: usize) -> Self {
+        Self { pos, norm, material }
     }
 }
 
 impl Hittable for Plane {
     fn dist(&self, from: Vec3) -> f32 {
-        Vec3(0.0, 1.0, 0.0) * (from - self.pos())
+        self.norm * (from - self.pos())
     }
 }
 
@@ -33,7 +34,7 @@ impl Position for Plane {
 
 impl Normal for Plane {
     fn norm(&self, _point: Vec3) -> Vec3 {
-        Vec3(0.0, 1.0, 0.0)
+        self.norm
     }
 }
 

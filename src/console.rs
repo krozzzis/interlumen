@@ -24,7 +24,7 @@ use crate::engine::Engine;
 fn draw(width: u16, height: u16, engine: &Engine) -> anyhow::Result<()> {
     let image = 
     {
-        engine.renderer_driver.draw_image(width as usize, height as usize, &engine.scene)
+        engine.renderer_driver.draw_image(width as usize, height as usize)
     };
     for y in 0..height as usize {
         execute!(stdout(), SavePosition, MoveTo(0, y as u16),)?;

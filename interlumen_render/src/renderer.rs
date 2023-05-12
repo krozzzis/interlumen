@@ -30,7 +30,7 @@ impl RendererSettings {
 pub struct Renderer {}
 
 impl Renderer {
-    pub const FALLBACK_MATERIAL: BasicMaterial = BasicMaterial { albedo: Color::new(1.0, 0.0, 1.0, 1.0), roughness: 0.0};
+    pub const FALLBACK_MATERIAL: BasicMaterial = BasicMaterial { albedo: Color::new(1.0, 0.0, 1.0, 1.0), emit: Color::BLACK, roughness: 0.0};
 
     pub fn render_pixel(
         settings: &RendererSettings,
@@ -42,35 +42,34 @@ impl Renderer {
         screen_h: usize,
         camera: &Camera,
     ) -> Color {
+        let mut incoming_color = Color::BLACK;
+        let mut ray_color = Color::WHITE;
+
         let mut pixel_ray = camera.get_pixel_ray(x, y, screen_w, screen_h, settings.pixel_ratio);
-
-        let mut color = Color::BLACK;
-        let mut color_multiplier = 1.0;
         for _ in 0..settings.ray_depth {
-
             if let Some(payload) = Renderer::closest_hit(settings, &pixel_ray, scene) {
                 let hit = payload.point;
                 let obj = payload.object;
 
                 let norm = obj.norm(hit);
-
                 if let Some(a) = materials.get(obj.material()) {
-                    color += a.get_color(obj.uv(hit)).albedo * color_multiplier;
-                } else {
-                    color += Renderer::FALLBACK_MATERIAL.get_color(obj.uv(hit)).albedo * color_multiplier;
-                }
+                    let color = a.get_color(obj.uv(hit));
+                    incoming_color += color.emit * ray_color;
+                    ray_color *= color.albedo * (1.0 / (payload.distance*payload.distance));
+                    let rand_dir = (Vec3(rand::random(), rand::random(), rand::random()) * color.roughness + norm).norm();
+                    let new_dir = (rand_dir * (norm * rand_dir).signum()).norm();
+                    pixel_ray = Ray {
+                        origin: hit + norm*0.001,
+                        dir: new_dir,
+                    };
+                }               
 
-                pixel_ray = Ray {
-                    origin: hit + norm*0.001,
-                    dir: pixel_ray.dir.reflect(norm),
-                }
             } else {
-                color += Color::BLACK * color_multiplier;
+                // incoming_color += Color::new(4.5, 4.5, 4.5, 1.0) * ray_color;
+                break;
             }
-            color_multiplier *= 0.5;
-
         }
-        color.clamp(0.0, 1.0)
+        incoming_color
     }
 
     pub fn closest_hit<'a>(

@@ -251,6 +251,25 @@ impl MulAssign<f32> for Color {
     }
 }
 
+impl Mul<Color> for Color {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        Self {
+            r: self.r * other.r,
+            g: self.g * other.g,
+            b: self.b * other.b,
+            a: self.a * other.a,
+        }
+    }
+}
+
+impl MulAssign<Color> for Color {
+    fn mul_assign(&mut self, other: Self) {
+        *self = *self * other;
+    }
+}
+
 impl PartialEq for Color {
     fn eq(&self, other: &Self) -> bool {
         self.r == other.r && self.g == other.g && self.b == other.b && self.a == other.a
